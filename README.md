@@ -1,3 +1,7 @@
+DEMO LINK FOR VIEWING THE WORKING OF THIS PLATFORM
+
+https://drive.google.com/file/d/1qf15JoDHaipgKQmfgL13WGUE7P8b6y5s/view?usp=sharing
+
 # AI Interview Readiness Platform
 
 A full-stack **career intelligence** application that simulates recruiter-style screening: resume parsing, ATS-style keyword fit, role-specific technical quizzes, communication and mock-interview analysis, GitHub/portfolio signals, weighted readiness scoring, shortlist simulation, explainable metrics, and a structured improvement roadmap—with optional **OpenAI** enrichment for narrative copy while **numeric scores stay deterministic**.
@@ -360,11 +364,3 @@ dev-project/
 5. **Observability** — structured logs, metrics, tracing around `evaluateCandidate` and external calls.
 
 ---
-
-## Open in Cursor
-
-Open the **`dev-project`** folder as the workspace root so paths, Git, and search stay aligned with this repo.
-
----
-
-*Built as an interview-readiness MVP: fast feedback loop, explainable scoring hooks, and a path toward real SaaS hardening.*
