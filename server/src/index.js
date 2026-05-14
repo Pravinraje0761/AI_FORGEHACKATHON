@@ -6,6 +6,16 @@ import { evaluateCandidate } from './evaluate.js'
 import { extractResumeText } from './resume.js'
 import { getQuestionSet, listRoles } from './questionsBank.js'
 
+function clipText(s, max) {
+  if (typeof s !== 'string') return ''
+  return s.length <= max ? s : s.slice(0, max)
+}
+
+function clipUrl(s, max) {
+  const t = typeof s === 'string' ? s.trim() : ''
+  return t.length <= max ? t : t.slice(0, max)
+}
+
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
@@ -25,9 +35,27 @@ app.get('/api/roles', (_req, res) => {
   res.json({ roles: listRoles() })
 })
 
-app.get('/api/questions', (req, res) => {
+app.post('/api/questions', upload.single('resume'), async (req, res) => {
+  const role = req.body.role || 'Full Stack Developer'
+  let resumeText = ''
+  if (req.file?.buffer) {
+    try {
+      resumeText = await extractResumeText(req.file.buffer, req.file.originalname || '')
+    } catch (err) {
+      console.error('Failed to parse resume for questions:', err)
+    }
+  } else if (req.body.resumeText) {
+    resumeText = req.body.resumeText
+  }
+  
+  const questions = await getQuestionSet(role, resumeText)
+  res.json({ role, questions })
+})
+
+app.get('/api/questions', async (req, res) => {
   const role = typeof req.query.role === 'string' ? req.query.role : 'Full Stack Developer'
-  res.json({ role, questions: getQuestionSet(role) })
+  const questions = await getQuestionSet(role)
+  res.json({ role, questions })
 })
 
 app.post('/api/evaluate', upload.single('resume'), async (req, res) => {
@@ -52,14 +80,15 @@ app.post('/api/evaluate', upload.single('resume'), async (req, res) => {
     }
 
     const payload = {
-      name: body.name || 'Candidate',
-      role: body.role || 'Full Stack Developer',
-      skillLevel: body.skillLevel || 'Mid',
+      name: clipText(body.name || 'Candidate', 120),
+      role: clipText(body.role || 'Full Stack Developer', 80),
+      skillLevel: clipText(body.skillLevel || 'Mid', 40),
       resumeText,
-      githubUrl: body.githubUrl || '',
-      portfolioUrl: body.portfolioUrl || '',
-      linkedinUrl: body.linkedinUrl || '',
-      introText: body.introText || '',
+      githubUrl: clipUrl(body.githubUrl || '', 512),
+      portfolioUrl: clipUrl(body.portfolioUrl || '', 512),
+      linkedinUrl: clipUrl(body.linkedinUrl || '', 512),
+      introText: clipText(body.introText || '', 20000),
+      mockInterviewAnswer: clipText(body.mockInterviewAnswer || '', 20000),
       techAnswers,
     }
 

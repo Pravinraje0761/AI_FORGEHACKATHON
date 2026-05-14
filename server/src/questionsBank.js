@@ -132,6 +132,42 @@ export const QUESTIONS_BY_ROLE = {
       correctIndex: 1,
     },
   ],
+  'Backend Engineer': [
+    ...COMMON,
+    {
+      id: 'be-auth',
+      question: 'For backend services, a common secure session approach is:',
+      options: [
+        'Long-lived JWT in localStorage only',
+        'HttpOnly cookies + short-lived access tokens + refresh rotation',
+        'Password in query string for caching',
+        'Symmetric keys shared in frontend bundle',
+      ],
+      correctIndex: 1,
+    },
+    {
+      id: 'be-db',
+      question: 'A database index primarily helps with:',
+      options: [
+        'Eliminating migrations',
+        'Speeding certain lookups and supporting selective uniqueness',
+        'Storing images inline',
+        'Removing foreign keys',
+      ],
+      correctIndex: 1,
+    },
+    {
+      id: 'be-api',
+      question: 'REST statelessness implies:',
+      options: [
+        'Server stores UI state in memory per tab',
+        'Each request contains enough context; server does not rely on prior session memory',
+        'Clients cannot cache responses',
+        'GraphQL is required',
+      ],
+      correctIndex: 1,
+    },
+  ],
   'UI/UX Designer': [
     {
       id: 'ux-fitts',
@@ -176,20 +212,89 @@ export const QUESTIONS_BY_ROLE = {
   ],
 }
 
+import OpenAI from 'openai'
+
+const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null
+
 const DEFAULT_ROLE = 'Full Stack Developer'
 
 export function listRoles() {
   return Object.keys(QUESTIONS_BY_ROLE)
 }
 
-/** @param {string} role */
-export function getQuestionSet(role) {
+/** 
+ * @param {string} role 
+ * @param {string} [resumeText]
+ */
+export async function getQuestionSet(role, resumeText) {
   const key = QUESTIONS_BY_ROLE[role] ? role : DEFAULT_ROLE
-  return QUESTIONS_BY_ROLE[key].map((q) => ({
+  const staticQuestions = QUESTIONS_BY_ROLE[key].map((q) => ({
     id: q.id,
     question: q.question,
     options: q.options,
   }))
+
+  if (!openai) {
+    return staticQuestions
+  }
+
+  try {
+    const contextPrompt = resumeText && resumeText.length > 100 
+      ? `Based on this candidate's resume: "${resumeText.slice(0, 2500)}", generate 5 role-specific and resume-aligned technical MCQs.`
+      : `Generate 5 standard but high-quality technical MCQs for a ${role} position.`
+
+    const prompt = `
+      You are an expert technical interviewer for the role of ${role}.
+      ${contextPrompt}
+      
+      Requirements:
+      1. Each question MUST be highly professional and test deep technical knowledge or practical scenario-based problem solving.
+      2. If a resume was provided, prioritize questions about the specific technologies, projects, or methodologies mentioned in the resume, but ensure they remain relevant to the ${role} role.
+      3. If no resume is provided, generate the best possible industry-standard questions for a ${role}.
+      4. Each question must have exactly 4 options and 1 correct index (0-3).
+      5. Format: JSON object with "questions" key containing array of objects { id, question, options, correctIndex }.
+      
+      Respond ONLY with the JSON object.
+    `
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'system', content: "You are a professional technical assessment engine." }, { role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      temperature: 0.7,
+    })
+
+    const raw = response.choices[0].message.content
+    const data = JSON.parse(raw)
+    const aiQuestions = Array.isArray(data.questions) ? data.questions : []
+    
+    if (aiQuestions.length < 3) {
+      return staticQuestions
+    }
+
+    // Map AI questions and store them in the global bank for this session
+    const mapped = aiQuestions.map((q, idx) => {
+      const id = q.id || `ai-q-${Date.now()}-${idx}`
+      const cleanQ = {
+        id,
+        question: q.question,
+        options: q.options,
+        correctIndex: typeof q.correctIndex === 'number' ? q.correctIndex : 0
+      }
+      
+      // Store in a session-based or global cache so scoreTechnical can find them
+      // For this demo, we add them to the QUESTIONS_BY_ROLE list if not present
+      if (!QUESTIONS_BY_ROLE[key].find(sq => sq.id === id)) {
+        QUESTIONS_BY_ROLE[key].push(cleanQ)
+      }
+      return { id: cleanQ.id, question: cleanQ.question, options: cleanQ.options }
+    })
+
+    return mapped
+  } catch (err) {
+    console.error('AI Question Generation failed:', err)
+    return staticQuestions
+  }
 }
 
 /** @param {string} role */
@@ -198,14 +303,22 @@ export function scoreTechnical(role, answers) {
   const bank = QUESTIONS_BY_ROLE[key]
   let correct = 0
   const breakdown = []
-  for (let i = 0; i < bank.length; i++) {
-    const q = bank[i]
+  
+  // Only score questions that were actually asked (sent in answers keys)
+  const answerIds = Object.keys(answers)
+  const relevantQuestions = bank.filter(q => answerIds.includes(q.id))
+  
+  if (relevantQuestions.length === 0) {
+     return { score: 0, correct: 0, total: 0, breakdown: [] }
+  }
+
+  for (const q of relevantQuestions) {
     const selected = typeof answers[q.id] === 'number' ? answers[q.id] : -1
     const ok = selected === q.correctIndex
     if (ok) correct += 1
     breakdown.push(`${ok ? '✓' : '✗'} ${q.question.slice(0, 52)}…`)
   }
-  const base = Math.round((correct / bank.length) * 100)
-  const adjusted = Math.min(100, Math.max(35, base + (correct === bank.length ? 5 : 0)))
-  return { score: adjusted, correct, total: bank.length, breakdown }
+
+  const base = Math.round((correct / relevantQuestions.length) * 100)
+  return { score: Math.min(100, Math.max(0, base)), correct, total: relevantQuestions.length, breakdown }
 }
