@@ -5,6 +5,7 @@ import { Intake } from './components/Intake'
 import { Landing } from './components/Landing'
 import { LoadingEval } from './components/LoadingEval'
 import { TechnicalQuiz } from './components/TechnicalQuiz'
+import { MockInterview } from './components/MockInterview'
 import { fetchQuestions, submitEvaluation } from './lib/api'
 import type { EvaluateResponse, Step, TechQuestion } from './types'
 
@@ -24,6 +25,7 @@ export function App() {
   const [intake, setIntake] = useState<IntakePayload | null>(null)
   const [questions, setQuestions] = useState<TechQuestion[]>([])
   const [techAnswers, setTechAnswers] = useState<Record<string, number>>({})
+  const [, setMockAnswer] = useState('')
   const [result, setResult] = useState<EvaluateResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,6 +34,7 @@ export function App() {
     setIntake(null)
     setQuestions([])
     setTechAnswers({})
+    setMockAnswer('')
     setResult(null)
     setError(null)
   }, [])
@@ -45,18 +48,21 @@ export function App() {
     setError(null)
     setIntake(payload)
     try {
-      const qs = await fetchQuestions(payload.role)
+      setStep('loading') // Show loading while generating questions
+      const qs = await fetchQuestions(payload.role, payload.resumeFile)
       setQuestions(qs)
       setTechAnswers({})
       setStep('technical')
     } catch (e) {
       setError(String(e))
+      setStep('intake')
     }
   }
 
-  const runEvaluation = async () => {
+  const runEvaluation = async (finalMockAnswer: string) => {
     if (!intake) return
     setError(null)
+    setMockAnswer(finalMockAnswer)
     setStep('loading')
     const minUi = new Promise<void>((resolve) => window.setTimeout(resolve, 2400))
     const evalPromise = submitEvaluation({
@@ -67,6 +73,7 @@ export function App() {
       portfolioUrl: intake.portfolioUrl,
       linkedinUrl: intake.linkedinUrl,
       introText: intake.introText,
+      mockInterviewAnswer: finalMockAnswer,
       techAnswers,
       resumeFile: intake.resumeFile,
     })
@@ -76,7 +83,7 @@ export function App() {
       setStep('results')
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
-      setStep('technical')
+      setStep('mock-interview')
     }
   }
 
@@ -116,6 +123,16 @@ export function App() {
               answers={techAnswers}
               setAnswers={setTechAnswers}
               onBack={() => setStep('intake')}
+              onSubmit={() => setStep('mock-interview')}
+            />
+          </motion.div>
+        )}
+
+        {step === 'mock-interview' && intake && (
+          <motion.div key="mock-step" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <MockInterview
+              question={result?.personalizedMockQuestion || "Tell me about a time you faced a significant technical challenge. How did you approach it and what was the outcome?"}
+              onBack={() => setStep('technical')}
               onSubmit={runEvaluation}
             />
           </motion.div>

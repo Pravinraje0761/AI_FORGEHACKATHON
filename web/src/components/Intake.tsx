@@ -34,7 +34,7 @@ export function Intake({ initialRole, onBack, onNext }: Props) {
   useEffect(() => {
     fetchRoles()
       .then(setRoles)
-      .catch(() => setRoles(['Full Stack Developer', 'Data Analyst', 'AI Engineer', 'UI/UX Designer']))
+      .catch(() => setRoles(['Full Stack Developer', 'Backend Engineer', 'Data Analyst', 'AI Engineer', 'UI/UX Designer']))
   }, [])
 
   const roleOptions = useMemo(() => (roles.length ? roles : [initialRole]), [roles, initialRole])
