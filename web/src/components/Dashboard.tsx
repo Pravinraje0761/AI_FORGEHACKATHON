@@ -176,7 +176,8 @@ export function Dashboard({ data, candidateName, onReset }: { data: EvaluateResp
 
           {/* Hiring Probability Predictor */}
           <div className="group relative overflow-hidden rounded-[2.5rem] bg-slate-900/50 p-8 border border-white/10 backdrop-blur-xl lg:col-span-2">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400">Hiring Probability Predictor</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-400">Indicative Fit by Company Type</p>
+            <p className="mt-1 text-[10px] text-slate-500">Heuristic score, not a calibrated hiring probability.</p>
             <div className="mt-8 grid grid-cols-3 gap-6">
                {[
                  { label: 'Startup', val: data.hiringProbability?.startup || 0, color: 'text-sky-400' },
@@ -441,7 +442,7 @@ export function Dashboard({ data, candidateName, onReset }: { data: EvaluateResp
                         <p className="text-[10px] font-black uppercase text-indigo-400">Industry Benchmarking</p>
                         <p className="text-sm text-slate-300">{data.benchmarking?.vsOthers || 'N/A'}</p>
                       </div>
-                      <span className="text-2xl font-black text-white">{data.benchmarking?.percentile || 0}th <span className="text-[10px] uppercase text-slate-500">Percentile</span></span>
+                      <span className="text-2xl font-black text-white">{data.benchmarking?.percentile || 0}<span className="text-[10px] uppercase text-slate-500"> / 100 indicative</span></span>
                     </div>
                   </div>
 

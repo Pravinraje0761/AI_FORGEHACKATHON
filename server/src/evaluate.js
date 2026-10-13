@@ -57,16 +57,6 @@ function getRoleWeights(role) {
   return { ...ROLE_WEIGHT_PRESETS.default }
 }
 
-function hashToUnit(str) {
-  let h = 2166136261
-  const s = str || ''
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 16777619)
-  }
-  return ((h >>> 0) % 1001) / 1000
-}
-
 const SECTION_PATTERNS = {
   experience: /experience|employment|work history|career/i,
   education: /education|university|degree|college|academic/i,
@@ -689,15 +679,15 @@ function computeHiringProbabilities(overall, technical, portfolio, role) {
 }
 
 function buildBenchmarking(overall, dims, role, name) {
-  const seed = hashToUnit(`${name}|${role}|${dims.resume}|${dims.technical}|${dims.communication}`)
-  const blended = overall * 0.78 + seed * 14
-  const percentile = Math.min(97, Math.max(4, Math.round(blended)))
+  // No cohort data exists, so this is an indicative band mapped from the overall score
+  // alone. (It previously added up to 14 points of noise hashed from the candidate's name.)
+  const percentile = Math.min(97, Math.max(4, Math.round(overall)))
   const order = ['resume', 'technical', 'communication', 'portfolio']
   const strongest = order.slice().sort((a, b) => dims[b] - dims[a])[0]
   const weakest = order.slice().sort((a, b) => dims[a] - dims[b])[0]
   return {
     percentile,
-    vsOthers: `Estimated standing for ${role} intake with similar forms: ~${percentile}th percentile (seeded variance from your text fingerprint, anchored to your dimensional scores).`,
+    vsOthers: `Indicative band for ${role} candidates, mapped from your overall score. No comparison data is used, so this is not a true percentile.`,
     skillHeatmap: [
       { skill: 'Resume signal', score: dims.resume },
       { skill: 'Technical depth', score: dims.technical },
@@ -1034,6 +1024,9 @@ function salaryHeuristic(overall, skillLevel) {
  * @param {string} input.mockInterviewAnswer
  * @param {Record<string, number>} input.techAnswers
  */
+// Exported for unit tests.
+export const _internals = { overallLevel, shortlist, computeHiringProbabilities, buildBenchmarking, getRoleWeights }
+
 export async function evaluateCandidate(input) {
   const started = Date.now()
   const role = input.role || 'Full Stack Developer'
