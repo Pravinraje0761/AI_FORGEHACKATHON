@@ -1,8 +1,9 @@
-DEMO LINK FOR VIEWING THE WORKING OF THIS PLATFORM
-
-https://drive.google.com/file/d/1qf15JoDHaipgKQmfgL13WGUE7P8b6y5s/view?usp=sharing
-
 # AI Interview Readiness Platform
+
+[![CI](https://github.com/Pravinraje0761/AI_FORGEHACKATHON/actions/workflows/ci.yml/badge.svg)](https://github.com/Pravinraje0761/AI_FORGEHACKATHON/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**[Watch the demo video](https://drive.google.com/file/d/1qf15JoDHaipgKQmfgL13WGUE7P8b6y5s/view?usp=sharing)**
 
 A full-stack **career intelligence** application that simulates recruiter-style screening: resume parsing, ATS-style keyword fit, role-specific technical quizzes, communication and mock-interview analysis, GitHub/portfolio signals, weighted readiness scoring, shortlist simulation, explainable metrics, and a structured improvement roadmap—with optional **OpenAI** enrichment for narrative copy while **numeric scores stay deterministic**.
 
@@ -39,7 +40,7 @@ A full-stack **career intelligence** application that simulates recruiter-style 
 | **Screening composite** | Shortlist (Yes / Maybe / No) uses overall score plus penalties for very weak communication or missing/poor quiz performance. |
 | **Recruiter simulation** | Verdict band, likelihood, concerns, “why you might fail,” pressure-handling heuristic—all derived from dimensional scores unless AI adds prose. |
 | **Roadmap** | Three phases with role-specific titles, concrete tasks, and curated resource links; items shaped for the dashboard (`{ text, link? }`). |
-| **Dashboard** | Radar chart, heatmaps, timelines, hiring probability bands, career suggestions, replay-style highlights from mock text. |
+| **Dashboard** | Radar chart, heatmaps, timelines, indicative fit-by-company-type scores, career suggestions, replay-style highlights from mock text. |
 | **Speech (optional)** | Client-side **Web Speech API** for dictation into forms—not server-side audio analysis. |
 
 ---
@@ -165,7 +166,8 @@ Exact fractions are defined in `getRoleWeights()` in `server/src/evaluate.js`.
 ### What is *not* claimed as “real AI”
 
 - **Voice** is transcribed in-browser; the server only sees **text**.  
-- **Benchmark percentile** is a **model estimate** seeded from your inputs, not a live global cohort database.  
+- **Indicative band** (shown where a percentile would be) is mapped from the overall score alone; there is no cohort data, so it is not a true percentile.  
+- **Fit by company type** (startup / mid-size / large tech) is a fixed formula over your scores, not a calibrated hiring probability.  
 - **Portfolio HEAD** can fail on hosts that block `HEAD`—treat as a best-effort signal.
 
 ---
@@ -284,6 +286,15 @@ Open **`http://localhost:5173`**.
 | `web/` | `npm run preview` | Preview production build |
 
 ---
+
+## Tests
+
+```bash
+cd server && npm ci && npm test   # evaluation engine: thresholds, weights, determinism, end-to-end scoring
+cd web && npm ci && npm run build # type-check and build
+```
+
+CI runs both on every push.
 
 ## Production deployment
 
